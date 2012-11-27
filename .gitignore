@@ -1,0 +1,10 @@
+*.pro.user
+*.dll
+*.xpl
+*.zip
+*.rc
+/_msvc/*
+/_gcc/*
+*Makefile*
+release
+
