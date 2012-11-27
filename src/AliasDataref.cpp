@@ -18,67 +18,103 @@
 #include <fstream>
 #include <boost/tokenizer.hpp>
 
-//xplmType_Unknown	0	Data of a type the current XPLM doesn't do.
-//xplmType_Int	1	A single 4-byte integer, native endian.
-//xplmType_Float	2	A single 4-byte float, native endian.
-//xplmType_Double	4	A single 8-byte double, native endian.
-//xplmType_FloatArray	8	An array of 4-byte floats, native endian.
-//xplmType_IntArray	16	An array of 4-byte integers, native endian.
-//xplmType_Data	32	A variable block of data.
-
 //using namespace PPL;
 using namespace std;
 using namespace boost;
 
-XPLMDataRef longDR;
-XPLMDataRef shortDR;
-
-int readInt(void *) {
-  return XPLMGetDatai(longDR);
-}
-void writeInt(void *, int inValue) {
-  XPLMSetDatai(longDR, inValue);
-}
-
-float readFloat(void *) {
-  return XPLMGetDataf(longDR);
-}
-void writeFloat(void *, float inValue) {
-  XPLMSetDataf(longDR, inValue);
-}
-
-double readDouble(void *) {
-  return XPLMGetDatad(longDR);
-}
-void writeDouble(void *, double inValue) {
-  XPLMSetDatad(longDR, inValue);
-}
-
-int readIntArr      (void *, int * outValues, int inOffset, int inMax) {
-  return XPLMGetDatavi(longDR, outValues, inOffset, inMax);
-}
-
-void writeIntArr    (void *, int * inValues, int inOffset, int inCount) {
-  XPLMSetDatavi(longDR, inValues, inOffset, inCount);
-}
-
-int readFloatArr    (void *, float * outValues, int inOffset, int inMax) {
-  return XPLMGetDatavf(longDR, outValues, inOffset, inMax);
-}
-
-void writeFloatArr  (void *, float * inValues, int inOffset, int inCount) {
-  XPLMSetDatavf(longDR, inValues, inOffset, inCount);
-}
-
-int readBytes       (void *, void * outValue, int inOffset, int inMaxLength) {
-  return XPLMGetDatab(longDR, outValue, inOffset, inMaxLength);
-}
-
-void writeBytes     (void *, void * inValue, int inOffset, int inLength) {
-  XPLMSetDatab(longDR, inValue, inOffset, inLength);
-}
 
 
+class AliasDataref {
+public:
+  AliasDataref(const std::string &longIdent, const std::string &shortIdent ) {
+    _shortIdent = shortIdent;
+    _longIdent = longIdent;
+  }
+
+  void registerDR() {
+    _longDR = XPLMFindDataRef(_longIdent.c_str());
+
+    _shortDR = XPLMRegisterDataAccessor(
+          _shortIdent.c_str(),
+          XPLMGetDataRefTypes(_longDR),
+          XPLMCanWriteDataRef(_longDR),
+          &AliasDataref::_readInt,      &AliasDataref::_writeInt,
+          &AliasDataref::_readFloat,    &AliasDataref::_writeFloat,
+          &AliasDataref::_readDouble,   &AliasDataref::_writeDouble,
+          &AliasDataref::_readIntArr,   &AliasDataref::_writeIntArr,
+          &AliasDataref::_readFloatArr, &AliasDataref::_writeFloatArr,
+          &AliasDataref::_readBytes,    &AliasDataref::_writeBytes,
+          (void *)this, (void *)this);
+  }
+
+  void unregisterDR() {
+    XPLMUnregisterDataAccessor(_shortDR);
+  }
+
+  void meetDRE() {
+    XPLMPluginID PluginID = XPLMFindPluginBySignature("xplanesdk.examples.DataRefEditor");
+    if (PluginID != XPLM_NO_PLUGIN_ID)
+    {
+      XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)_shortIdent.c_str());
+    }
+  }
+
+private:
+  std::string _shortIdent;
+  std::string _longIdent;
+
+  XPLMDataRef _shortDR;
+  XPLMDataRef _longDR;
+  static int _readInt(void * ref) {
+    ///AliasDataref* that = (AliasDataref*)ref;
+    return XPLMGetDatai(((AliasDataref*)ref)->_longDR);
+  }
+  static void _writeInt(void * ref, int inValue) {
+    XPLMSetDatai(((AliasDataref*)ref)->_longDR, inValue);
+  }
+
+  static float _readFloat(void * ref) {
+    return XPLMGetDataf(((AliasDataref*)ref)->_longDR);
+  }
+  static void _writeFloat(void * ref, float inValue) {
+    XPLMSetDataf(((AliasDataref*)ref)->_longDR, inValue);
+  }
+
+  static double _readDouble(void * ref) {
+    return XPLMGetDatad(((AliasDataref*)ref)->_longDR);
+  }
+  static void _writeDouble(void * ref, double inValue) {
+    XPLMSetDatad(((AliasDataref*)ref)->_longDR, inValue);
+  }
+
+  static int _readIntArr      (void * ref, int * outValues, int inOffset, int inMax) {
+    return XPLMGetDatavi(((AliasDataref*)ref)->_longDR, outValues, inOffset, inMax);
+  }
+
+  static void _writeIntArr    (void * ref, int * inValues, int inOffset, int inCount) {
+    XPLMSetDatavi(((AliasDataref*)ref)->_longDR, inValues, inOffset, inCount);
+  }
+
+  static int _readFloatArr    (void * ref, float * outValues, int inOffset, int inMax) {
+    return XPLMGetDatavf(((AliasDataref*)ref)->_longDR, outValues, inOffset, inMax);
+  }
+
+  static void _writeFloatArr  (void * ref, float * inValues, int inOffset, int inCount) {
+    XPLMSetDatavf(((AliasDataref*)ref)->_longDR, inValues, inOffset, inCount);
+  }
+
+  static int _readBytes       (void * ref, void * outValue, int inOffset, int inMaxLength) {
+    return XPLMGetDatab(((AliasDataref*)ref)->_longDR, outValue, inOffset, inMaxLength);
+  }
+
+  static void _writeBytes     (void * ref, void * inValue, int inOffset, int inLength) {
+    XPLMSetDatab(((AliasDataref*)ref)->_longDR, inValue, inOffset, inLength);
+  }
+
+};
+
+AliasDataref propSpeed("sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec", "Dozer/propspeed");
+AliasDataref xpLight("sim/cockpit/radios/transponder_light", "Dozer/xplight");static
 
 //FLCB
 float RunOnce ( float, float, int, void * );
@@ -92,21 +128,8 @@ PLUGIN_API int XPluginStart(
   strcpy(outSig,  "Dozer.AliasDataref");
   strcpy(outDesc, "");
 
-  longDR = XPLMFindDataRef("sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec");
-
-  shortDR = XPLMRegisterDataAccessor(
-        "Dozer/propspeed",
-        XPLMGetDataRefTypes(longDR),
-        XPLMCanWriteDataRef(longDR),
-        readInt, writeInt,
-        readFloat, writeFloat,
-        readDouble, writeDouble,
-        readIntArr, writeIntArr,
-        readFloatArr, writeFloatArr,
-        readBytes, writeBytes,
-        0, 0);
-
-
+  propSpeed.registerDR();
+  xpLight.registerDR();
 
   //string inputFile = thisPluginPath.prependPlanePath("/RTDatarefDev.cfg");
   //openFile(inputFile);
@@ -118,7 +141,9 @@ PLUGIN_API int XPluginStart(
 }
 
 PLUGIN_API void XPluginStop(void) {
-  XPLMUnregisterDataAccessor(shortDR);
+
+  propSpeed.unregisterDR();
+  xpLight.unregisterDR();
 
   //FLCB
   XPLMUnregisterFlightLoopCallback(RunOnce, NULL);
@@ -141,11 +166,9 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID, long, void *) {}
 
 //FLCB
 float RunOnce(float, float, int, void *) {
-  XPLMPluginID PluginID = XPLMFindPluginBySignature("xplanesdk.examples.DataRefEditor");
-  if (PluginID != XPLM_NO_PLUGIN_ID)
-  {
-    XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)"Dozer/propspeed");
-  }
+
+  propSpeed.meetDRE();
+  xpLight.meetDRE();
 
   return 0;  // Flight loop is called only once!
 }
