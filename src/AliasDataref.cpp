@@ -28,9 +28,12 @@ class AliasDataref {
 public:
   AliasDataref(const std::string &longIdent, const std::string &shortIdent ) {
 
-    _shortIdent = shortIdent;
     _longIdent = longIdent;
+    _shortIdent = shortIdent;
 
+  }
+
+  void start() {
     _longDR = XPLMFindDataRef(_longIdent.c_str());
     _shortDR = XPLMFindDataRef(_shortIdent.c_str());
 
@@ -47,44 +50,25 @@ public:
             &AliasDataref::_readBytes,    &AliasDataref::_writeBytes,
             (void *)this, (void *)this);
     }
-
-    // linked list
-
-    if(_first == 0)
-      _first = this;
-    else {
-      AliasDataref* ptr = _first;
-      while (ptr->_next != 0)
-        ptr = ptr->_next;
-      ptr->_next = this;
-    }
   }
 
-  //  ~AliasDataref() {
-  //    if(_shortDR)
-  //      XPLMUnregisterDataAccessor(_shortDR);
-  //  }
-
-  static void stop() {
-    AliasDataref* ptr = _first;
-    while (ptr != 0) {
-      if (ptr->_longDR && ptr->_shortDR)
-        XPLMUnregisterDataAccessor(ptr->_shortDR);
-      ptr = ptr->_next;
-    }
+  void stop() {
+    XPLMUnregisterDataAccessor(_shortDR);
   }
 
-  static void registerWithDRE() {
+  void registerWithDRE() {
     XPLMPluginID PluginID = XPLMFindPluginBySignature("xplanesdk.examples.DataRefEditor");
-    if (PluginID != XPLM_NO_PLUGIN_ID)
-    {
-      AliasDataref* ptr = _first;
-      while (ptr != 0) {
-        if (ptr->_longDR && ptr->_shortDR)
-          XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)ptr->_shortIdent.c_str());
-        ptr = ptr->_next;
-      }
+    if (PluginID != XPLM_NO_PLUGIN_ID) {
+      if (_longDR && _shortDR)
+        XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)_shortIdent.c_str());
     }
+  }
+
+  AliasDataref(const AliasDataref& rhs) {
+    _shortIdent = rhs._shortIdent;
+    _longIdent = rhs._longIdent;
+    _shortDR = rhs._shortDR;
+    _longDR = rhs._longDR;
   }
 
 private:
@@ -139,22 +123,13 @@ private:
     XPLMSetDatab(((AliasDataref*)ref)->_longDR, inValue, inOffset, inLength);
   }
 
-  static AliasDataref* _first;
-  AliasDataref* _next;
-};
+  AliasDataref operator=(const AliasDataref&) {}
 
-AliasDataref* AliasDataref::_first = 0;
+};
 
 ////////////////////////////////////////
 
-//vector<AliasDataref *> aliasDR;
-
-AliasDataref foo("sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec",
-                 "Dozer/propspeed");
-AliasDataref bar("sim/cockpit/radios/transponder_light",
-                 "Dozer/xplight");
-AliasDataref baz("sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot",
-                 "Dozer/barosetting");
+vector<AliasDataref> aliasDR;
 
 //FLCB
 float RunOnce ( float, float, int, void * );
@@ -168,19 +143,25 @@ PLUGIN_API int XPluginStart(
   strcpy(outSig,  "Dozer.AliasDataref");
   strcpy(outDesc, "");
 
-  //  aliasDR.push_back(new AliasDataref("sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec",
-  //                                     "Dozer/propspeed"));
-  //  aliasDR.push_back(new AliasDataref("sim/cockpit/radios/transponder_light",
-  //                                     "Dozer/xplight"));
-  //  aliasDR.push_back(new AliasDataref("sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot",
-  //                                     "Dozer/barosetting"));
-  //  // these next two should not be created or registered with DRE.
-  //  // non-existant long dataref:
-  //  aliasDR.push_back(new AliasDataref("blargle/blargle/blargle",
-  //                                     "Dozer/blargle"));
-  //  // duplicate short dataref:
-  //  aliasDR.push_back(new AliasDataref("sim/cockpit2/radios/indicators/nav1_has_dme",
-  //                                     "Dozer/xplight"));
+  aliasDR.push_back(AliasDataref("sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec",
+                                 "Dozer/propspeed"));
+  aliasDR.push_back(AliasDataref("sim/cockpit/radios/transponder_light",
+                                 "Dozer/xplight"));
+  aliasDR.push_back(AliasDataref("sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot",
+                                 "Dozer/barosetting"));
+  // these next two should not be created or registered with DRE.
+  // non-existant long dataref:
+  aliasDR.push_back(AliasDataref("blargle/blargle/blargle",
+                                 "Dozer/blargle"));
+  // duplicate short dataref:
+  aliasDR.push_back(AliasDataref("sim/cockpit2/radios/indicators/nav1_has_dme",
+                                 "Dozer/xplight"));
+
+
+  vector<AliasDataref>::iterator itr;
+  for (itr = aliasDR.begin(); itr != aliasDR.end(); itr++) {
+    (*itr).start();
+  }
 
   //string inputFile = thisPluginPath.prependPlanePath("/RTDatarefDev.cfg");
   //openFile(inputFile);
@@ -193,12 +174,10 @@ PLUGIN_API int XPluginStart(
 
 PLUGIN_API void XPluginStop(void) {
 
-  //  vector<AliasDataref*>::iterator itr;
-  //  for(itr = aliasDR.begin(); itr != aliasDR.end(); itr++) {
-  //    delete *itr;
-  //}
-
-  AliasDataref::stop();
+  vector<AliasDataref>::iterator itr;
+  for (itr = aliasDR.begin(); itr != aliasDR.end(); itr++) {
+    (*itr).stop();
+  }
 
   //FLCB
   XPLMUnregisterFlightLoopCallback(RunOnce, NULL);
@@ -213,7 +192,10 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID, long, void *) {}
 //FLCB
 float RunOnce(float, float, int, void *) {
 
-  AliasDataref::registerWithDRE();
+  vector<AliasDataref>::iterator itr;
+  for (itr = aliasDR.begin(); itr != aliasDR.end(); itr++) {
+    (*itr).registerWithDRE();
+  }
 
   return 0;  // Flight loop is called only once!
 }
