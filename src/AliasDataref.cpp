@@ -29,33 +29,43 @@ public:
   AliasDataref(const std::string &longIdent, const std::string &shortIdent ) {
     _shortIdent = shortIdent;
     _longIdent = longIdent;
+
+    if(_first == 0)
+      _first = this;
+    else {
+      AliasDataref* ptr = _first;
+      while (ptr->_next != 0)
+        ptr = ptr->_next;
+      ptr->_next = this;
+    }
   }
 
-  void registerDR() {
-    _longDR = XPLMFindDataRef(_longIdent.c_str());
-
-    _shortDR = XPLMRegisterDataAccessor(
-          _shortIdent.c_str(),
-          XPLMGetDataRefTypes(_longDR),
-          XPLMCanWriteDataRef(_longDR),
-          &AliasDataref::_readInt,      &AliasDataref::_writeInt,
-          &AliasDataref::_readFloat,    &AliasDataref::_writeFloat,
-          &AliasDataref::_readDouble,   &AliasDataref::_writeDouble,
-          &AliasDataref::_readIntArr,   &AliasDataref::_writeIntArr,
-          &AliasDataref::_readFloatArr, &AliasDataref::_writeFloatArr,
-          &AliasDataref::_readBytes,    &AliasDataref::_writeBytes,
-          (void *)this, (void *)this);
+  static void start(){
+    AliasDataref* ptr = _first;
+    while (ptr != 0) {
+      ptr->_start();
+      ptr = ptr->_next;
+    }
   }
 
-  void unregisterDR() {
-    XPLMUnregisterDataAccessor(_shortDR);
+  static void stop() {
+    AliasDataref* ptr = _first;
+    while (ptr != 0) {
+      ptr->_stop();
+      ptr = ptr->_next;
+    }
   }
 
-  void meetDRE() {
+  static void registerWithDRE() {
     XPLMPluginID PluginID = XPLMFindPluginBySignature("xplanesdk.examples.DataRefEditor");
     if (PluginID != XPLM_NO_PLUGIN_ID)
     {
-      XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)_shortIdent.c_str());
+      AliasDataref* ptr = _first;
+      while (ptr != 0) {
+        if (ptr->_shortDR)
+          XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)ptr->_shortIdent.c_str());
+        ptr = ptr->_next;
+      }
     }
   }
 
@@ -65,6 +75,7 @@ private:
 
   XPLMDataRef _shortDR;
   XPLMDataRef _longDR;
+
   static int _readInt(void * ref) {
     ///AliasDataref* that = (AliasDataref*)ref;
     return XPLMGetDatai(((AliasDataref*)ref)->_longDR);
@@ -111,10 +122,42 @@ private:
     XPLMSetDatab(((AliasDataref*)ref)->_longDR, inValue, inOffset, inLength);
   }
 
+  void _start() {
+    _longDR = XPLMFindDataRef(_longIdent.c_str());
+    _shortDR = XPLMFindDataRef(_shortIdent.c_str());
+
+    if (_longDR && !_shortDR) {
+      _shortDR = XPLMRegisterDataAccessor(
+            _shortIdent.c_str(),
+            XPLMGetDataRefTypes(_longDR),
+            XPLMCanWriteDataRef(_longDR),
+            &AliasDataref::_readInt,      &AliasDataref::_writeInt,
+            &AliasDataref::_readFloat,    &AliasDataref::_writeFloat,
+            &AliasDataref::_readDouble,   &AliasDataref::_writeDouble,
+            &AliasDataref::_readIntArr,   &AliasDataref::_writeIntArr,
+            &AliasDataref::_readFloatArr, &AliasDataref::_writeFloatArr,
+            &AliasDataref::_readBytes,    &AliasDataref::_writeBytes,
+            (void *)this, (void *)this);
+    }
+  }
+
+  void _stop() {
+    if(_shortDR)
+      XPLMUnregisterDataAccessor(_shortDR);
+  }
+
+
+  static AliasDataref* _first;
+  AliasDataref* _next;
 };
 
+AliasDataref* AliasDataref::_first = 0;
+
 AliasDataref propSpeed("sim/cockpit2/engine/actuators/prop_rotation_speed_rad_sec", "Dozer/propspeed");
-AliasDataref xpLight("sim/cockpit/radios/transponder_light", "Dozer/xplight");static
+AliasDataref xpLight("sim/cockpit/radios/transponder_light", "Dozer/xplight");
+AliasDataref foo("sim/cockpit2/gauges/actuators/barometer_setting_in_hg_pilot", "Dozer/barosetting");
+AliasDataref noLong("blargle/blargle/blargle", "Dozer/blargle");
+AliasDataref dupeShort("sim/cockpit2/radios/indicators/nav1_has_dme", "Dozer/xplight");
 
 //FLCB
 float RunOnce ( float, float, int, void * );
@@ -128,8 +171,7 @@ PLUGIN_API int XPluginStart(
   strcpy(outSig,  "Dozer.AliasDataref");
   strcpy(outDesc, "");
 
-  propSpeed.registerDR();
-  xpLight.registerDR();
+  AliasDataref::start();
 
   //string inputFile = thisPluginPath.prependPlanePath("/RTDatarefDev.cfg");
   //openFile(inputFile);
@@ -142,8 +184,7 @@ PLUGIN_API int XPluginStart(
 
 PLUGIN_API void XPluginStop(void) {
 
-  propSpeed.unregisterDR();
-  xpLight.unregisterDR();
+  AliasDataref::stop();
 
   //FLCB
   XPLMUnregisterFlightLoopCallback(RunOnce, NULL);
@@ -167,8 +208,7 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID, long, void *) {}
 //FLCB
 float RunOnce(float, float, int, void *) {
 
-  propSpeed.meetDRE();
-  xpLight.meetDRE();
+  AliasDataref::registerWithDRE();
 
   return 0;  // Flight loop is called only once!
 }
