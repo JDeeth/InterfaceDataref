@@ -48,7 +48,9 @@ macx {
 }
 
 HEADERS += \ 
+    aliasdataref.h
 
 
 SOURCES += \
-	AliasDataref.cpp
+    AliasDatarefMain.cpp \
+    aliasdataref.cpp
