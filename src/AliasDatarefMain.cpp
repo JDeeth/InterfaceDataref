@@ -43,9 +43,12 @@ PLUGIN_API int XPluginStart(
     char * outSig,
     char * outDesc) {
 
-  strcpy(outName, "AliasDataref");
-  strcpy(outSig,  "Dozer.AliasDataref");
-  strcpy(outDesc, "");
+  char pluginName[] = "AliasDataref";
+  char pluginSig[]  = "Dozer.AliasDataref";
+  char pluginDesc[] = "";
+  strcpy_s(outName, sizeof(pluginName), pluginName);
+  strcpy_s(outSig,  sizeof(pluginSig),  pluginSig);
+  strcpy_s(outDesc, sizeof(pluginDesc), pluginDesc);
 
   // Here we define our datarefs in the source code as elements of the
   // aliasDR vector.
