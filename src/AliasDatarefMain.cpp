@@ -1,4 +1,3 @@
-#define MSG_ADD_DATAREF 0x01000000
 #define XPLM200 1
 
 //xplm

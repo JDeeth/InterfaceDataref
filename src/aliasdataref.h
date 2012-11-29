@@ -1,6 +1,12 @@
 #ifndef ALIASDATAREF_H
 #define ALIASDATAREF_H
 
+#include <string>
+#include <XPLMPlugin.h>
+#include <XPLMDataAccess.h>
+
+#define MSG_ADD_DATAREF 0x01000000
+
 class AliasDataref {
 public:
   // Class constructor.
