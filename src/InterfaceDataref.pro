@@ -53,6 +53,6 @@ HEADERS += \
 
 
 SOURCES += \
-    AliasDatarefMain.cpp \
     aliasdataref.cpp \
-    commandfromdataref.cpp
+    commandfromdataref.cpp \
+    main.cpp
