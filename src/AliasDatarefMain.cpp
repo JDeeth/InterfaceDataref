@@ -1,4 +1,4 @@
-#define XPLM200 1
+#define XPLM210 1
 
 //xplm
 #include <XPLMPlugin.h>

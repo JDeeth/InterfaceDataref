@@ -7,24 +7,24 @@ CONFIG -= thread qt rtti debug
 
 VERSION = 1.0.0
 
-INCLUDEPATH += ../../tools/SDK/CHeaders/XPLM
-INCLUDEPATH += ../../tools/SDK/CHeaders/Wrappers
-INCLUDEPATH += ../../tools/SDK/CHeaders/Widgets
-INCLUDEPATH += ../../tools/boost_1_49_0
-INCLUDEPATH += ../../tools/OpenAL/src
-INCLUDEPATH += ../../tools/Dozer/src
-INCLUDEPATH += ../../tools/ppl/src
-INCLUDEPATH += ../../tools/SimpleIni/src
+INCLUDEPATH += ../../tools/SDK213/CHeaders/XPLM
+INCLUDEPATH += ../../tools/SDK213/CHeaders/Wrappers
+INCLUDEPATH += ../../tools/SDK213/CHeaders/Widgets
+#INCLUDEPATH += ../../tools/boost_1_49_0
+#INCLUDEPATH += ../../tools/OpenAL/src
+#INCLUDEPATH += ../../tools/Dozer/src
+#INCLUDEPATH += ../../tools/ppl/src
+#INCLUDEPATH += ../../tools/SimpleIni/src
 #LIBS += -L../../tools/ppl/libDozerAliasDataref -lppl
 
 # Defined to use X-Plane SDK 2.0 capabilities - no backward compatibility before 9.0
-DEFINES += XPLM200
+DEFINES += XPLM210
 #DEFINES += PRIVATENAMESPACE=DozerAliasDataref
 
 win32 {
     DEFINES += APL=0 IBM=1 LIN=0
-    LIBS += -L../../tools/SDK/Libraries/Win
-    LIBS += -lXPLM -lXPWidgets
+    LIBS += -L../../tools/SDK213/Libraries/Win
+    LIBS += -lXPLM_64 -lXPWidgets_64
     TARGET = win.xpl
 }
 
