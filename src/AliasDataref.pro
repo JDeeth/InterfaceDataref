@@ -18,7 +18,7 @@ INCLUDEPATH += ../../tools/SDK213/CHeaders/Widgets
 #LIBS += -L../../tools/ppl/libDozerAliasDataref -lppl
 
 # Defined to use X-Plane SDK 2.0 capabilities - no backward compatibility before 9.0
-DEFINES += XPLM210
+DEFINES += XPLM210=1 XPLM200=1
 #DEFINES += PRIVATENAMESPACE=DozerAliasDataref
 
 win32 {
@@ -48,9 +48,11 @@ macx {
 }
 
 HEADERS += \ 
-    aliasdataref.h
+    aliasdataref.h \
+    commandfromdataref.h
 
 
 SOURCES += \
     AliasDatarefMain.cpp \
-    aliasdataref.cpp
+    aliasdataref.cpp \
+    commandfromdataref.cpp
